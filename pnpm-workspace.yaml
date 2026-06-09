@@ -12,3 +12,11 @@ onlyBuiltDependencies:
   - esbuild
   - register-scheme
   - unrs-resolver
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  unrs-resolver: true

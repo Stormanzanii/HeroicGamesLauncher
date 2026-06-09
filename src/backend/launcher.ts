@@ -1724,11 +1724,12 @@ async function callRunner(
   // requires a "./"
   if (!isWindows && !isAbsolute(bin) && runner.dir) bin = './' + bin
 
-  // On Windows: Use PowerShell's `Start-Process` to wait for the process and
-  // its children to exit, provided PowerShell is available
-  if (shouldUsePowerShell === null)
-    shouldUsePowerShell =
-      isWindows && !!(await searchForExecutableOnPath('powershell'))
+  // On Windows, spawning PowerShell is unreliable in some dev environments
+  // where Electron cannot resolve system executables. Runner binaries are CLI
+  // tools, so spawning them directly is enough and avoids that failure mode.
+  if (shouldUsePowerShell === null) {
+    shouldUsePowerShell = false
+  }
 
   if (shouldUsePowerShell) {
     const argsAsString = commandParts
@@ -1744,7 +1745,7 @@ async function callRunner(
     ]
     if (argsAsString) commandParts.push('-ArgumentList', argsAsString)
 
-    bin = fullRunnerPath = 'powershell'
+    bin = fullRunnerPath = 'powershell.exe'
   }
 
   const safeCommand = getRunnerCallWithoutCredentials(
@@ -1903,7 +1904,7 @@ function getRunnerCallWithoutCredentials(
     // PowerShell's argument formatting is quite different, instead of having
     // arguments as members of `command`, they're all in one specific member
     // (the one after "-ArgumentList")
-    if (runnerPath === 'powershell') {
+    if (runnerPath.toLowerCase().endsWith('powershell.exe')) {
       const argumentListIndex = modifiedCommand.indexOf('-ArgumentList') + 1
       if (!argumentListIndex) continue
       modifiedCommand[argumentListIndex] = modifiedCommand[
