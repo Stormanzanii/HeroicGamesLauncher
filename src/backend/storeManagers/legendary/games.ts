@@ -384,9 +384,9 @@ export default class LegendaryGame implements Game {
     this.currentDownloadSize = size
   }
 
-  private resetInstallProgress(appName: string) {
-    delete this.currentDownloadSize[appName]
-    delete this.tmpProgress[appName]
+  private resetInstallProgress() {
+    this.currentDownloadSize = undefined
+    this.tmpProgress = undefined
   }
 
   private defaultTmpProgress = () => ({
@@ -410,17 +410,12 @@ export default class LegendaryGame implements Game {
     if (downloadSizeMatch) {
       const downloadSize = parseFloat(downloadSizeMatch[1])
       if (Number.isFinite(downloadSize) && downloadSize > 0) {
-        this.currentDownloadSize[appName] = downloadSize
+        this.currentDownloadSize = downloadSize
       }
     }
 
-    if (!Object.hasOwn(this.tmpProgress, appName)) {
-      this.tmpProgress[appName] = this.defaultTmpProgress()
-      this.currentDownloadSize = parseFloat(downloadSizeMatch[1])
-    }
-
     if (!this.tmpProgress) {
-      this.tmpProgress = this.defaultTmpProgres()
+      this.tmpProgress = this.defaultTmpProgress()
     }
 
     const progress = this.tmpProgress
@@ -456,9 +451,8 @@ export default class LegendaryGame implements Game {
     // calculate percentage
     if (progress.bytes !== '') {
       const downloaded = parseFloat(progress.bytes)
-      const currentDownloadSize = this.currentDownloadSize[appName]
       const effectiveTotalDownloadSize =
-        currentDownloadSize || totalDownloadSize
+        this.currentDownloadSize || totalDownloadSize
 
       if (
         Number.isFinite(downloaded) &&
@@ -470,11 +464,6 @@ export default class LegendaryGame implements Game {
         progress.percent =
           newPercent >= 0 ? Math.min(newPercent, 100) : undefined
       }
-      const downloadCache = totalDownloadSize - (this.currentDownloadSize ?? 0)
-      const totalDownloaded = downloaded + downloadCache
-      const newPercent =
-        Math.round((totalDownloaded / totalDownloadSize) * 10000) / 100
-      progress.percent = newPercent >= 0 ? newPercent : undefined
     }
 
     // only send to frontend if all values are updated
@@ -500,8 +489,7 @@ export default class LegendaryGame implements Game {
       })
 
       // reset
-      this.tmpProgress[appName] = this.defaultTmpProgress()
-      this.tmpProgress = this.defaultTmpProgres()
+      this.tmpProgress = this.defaultTmpProgress()
     }
   }
 
@@ -516,7 +504,7 @@ export default class LegendaryGame implements Game {
       status: 'updating'
     })
     const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
-    this.resetInstallProgress(appName)
+    this.resetInstallProgress()
     const installPlatform = this.getGameInfo().install.platform!
     const info = await libraryManagerMap['legendary'].getInstallInfo(
       this.appName,
@@ -533,7 +521,6 @@ export default class LegendaryGame implements Game {
     if (downloadNoHttps) command['--no-https'] = true
 
     const onOutput = (data: string) => {
-      this.onInstallOrUpdateOutput(appName, 'updating', data, 0)
       this.onInstallOrUpdateOutput(
         'updating',
         data,
@@ -612,7 +599,7 @@ export default class LegendaryGame implements Game {
       return { status: 'error' }
     }
     const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
-    this.resetInstallProgress(appName)
+    this.resetInstallProgress()
     const info = await libraryManagerMap['legendary'].getInstallInfo(
       this.appName,
       platformToInstall
@@ -633,7 +620,6 @@ export default class LegendaryGame implements Game {
     else command['--skip-sdl'] = true
 
     const onOutput = (data: string) => {
-      this.onInstallOrUpdateOutput(appName, 'installing', data, 0)
       this.onInstallOrUpdateOutput(
         'installing',
         data,
