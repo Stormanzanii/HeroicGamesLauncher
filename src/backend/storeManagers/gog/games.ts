@@ -224,6 +224,11 @@ export default class GOGGame implements Game {
         folderPath
       )
       this.addShortcuts()
+
+      if (isLinux && this.isNative()) {
+        const gameConfig = GameConfig.get(this.id)
+        gameConfig.setSetting('steamRuntime', 'umu-scout')
+      }
     } catch (error) {
       logError([`Failed to import ${this.id}:`, error], LogPrefix.Gog)
     }
@@ -472,6 +477,9 @@ export default class GOGGame implements Game {
         )
       }
     } else if (isLinuxNative) {
+      const gameConfig = GameConfig.get(this.id)
+      gameConfig.setSetting('steamRuntime', 'umu-scout')
+
       const installer = join(install_path, 'support/postinst.sh')
       if (existsSync(installer)) {
         logInfo(`Running ${installer}`, LogPrefix.Gog)
@@ -1328,10 +1336,10 @@ export default class GOGGame implements Game {
       session_date: sessionDate,
       time
     }
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
+    const credentials = await GOGUser.getCredentials()
 
-    if (!userData) {
-      logWarning(['Unable to post session, userData not present'], {
+    if (!credentials) {
+      logWarning(['Unable to post session, credentials not present'], {
         prefix: LogPrefix.Gog
       })
       return
@@ -1341,9 +1349,9 @@ export default class GOGGame implements Game {
       logWarning(['App offline, unable to post new session at this time'], {
         prefix: LogPrefix.Gog
       })
-      const alreadySetData = playtimeSyncQueue.get(userData.galaxyUserId, [])
+      const alreadySetData = playtimeSyncQueue.get(credentials.user_id, [])
       alreadySetData.push({ ...data, appName: this.id })
-      playtimeSyncQueue.set(userData.galaxyUserId, alreadySetData)
+      playtimeSyncQueue.set(credentials.user_id, alreadySetData)
       runOnceWhenOnline(() => libraryManagerMap['gog'].syncQueuedPlaytime())
       return
     }
@@ -1357,9 +1365,9 @@ export default class GOGGame implements Game {
 
     if (!response || response.status !== 201) {
       logError('Failed to post session', { prefix: LogPrefix.Gog })
-      const alreadySetData = playtimeSyncQueue.get(userData.galaxyUserId, [])
+      const alreadySetData = playtimeSyncQueue.get(credentials.user_id, [])
       alreadySetData.push({ ...data, appName: this.id })
-      playtimeSyncQueue.set(userData.galaxyUserId, alreadySetData)
+      playtimeSyncQueue.set(credentials.user_id, alreadySetData)
       return
     }
 
@@ -1371,14 +1379,13 @@ export default class GOGGame implements Game {
       return
     }
     const credentials = await GOGUser.getCredentials()
-    const userData: UserData | undefined = configStore.get_nodefault('userData')
 
-    if (!credentials || !userData) {
+    if (!credentials) {
       return
     }
     const response = await axios
       .get(
-        `https://gameplay.gog.com/games/${this.id}/users/${userData?.galaxyUserId}/sessions`,
+        `https://gameplay.gog.com/games/${this.id}/users/${credentials.user_id}/sessions`,
         {
           headers: {
             Authorization: `Bearer ${credentials.access_token}`
