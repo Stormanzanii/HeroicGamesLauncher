@@ -508,11 +508,6 @@ export default class LegendaryGame implements Game {
     })
     const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
     this.resetInstallProgress()
-    const installPlatform = this.getGameInfo().install.platform!
-    const info = await libraryManagerMap['legendary'].getInstallInfo(
-      this.appName,
-      installPlatform
-    )
 
     const command: LegendaryCommand = {
       subcommand: 'update',
@@ -527,7 +522,7 @@ export default class LegendaryGame implements Game {
       this.onInstallOrUpdateOutput(
         'updating',
         data,
-        info.manifest?.download_size
+        0
       )
     }
 
@@ -603,10 +598,6 @@ export default class LegendaryGame implements Game {
     }
     const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
     this.resetInstallProgress()
-    const info = await libraryManagerMap['legendary'].getInstallInfo(
-      this.appName,
-      platformToInstall
-    )
 
     const command: LegendaryCommand = {
       subcommand: 'install',
@@ -626,7 +617,7 @@ export default class LegendaryGame implements Game {
       this.onInstallOrUpdateOutput(
         'installing',
         data,
-        info.manifest?.download_size
+        0
       )
     }
 
